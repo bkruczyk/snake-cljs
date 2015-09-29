@@ -1,5 +1,8 @@
 (ns snake-cljs.core
-  (:require [goog.dom :as dom]))
+  (:require [clojure.browser.repl :as repl]
+            [goog.dom :as dom]))
+
+(repl/connect "http://localhost:9000/repl")
 
 (.log js/console "Hello world!")
 
