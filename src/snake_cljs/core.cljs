@@ -6,15 +6,6 @@
 
 (.log js/console "Hello world!")
 
-(def canvas (dom/getElement "canvas"))
-(def drawingContext (.getContext canvas "2d"))
-
-(def i (atom 0))
-(def last-key (atom :right))
-(def snake (atom [{:x 4, :y 2} {:x 5, :y 2} {:x 6, :y 2}]))
-
-(def block-size 10)
-(def dim 50)
 (def directions {38 :up, 39 :right, 40 :down, 37 :left})
 (def movements {:up {:x 0, :y -1},
                 :down {:x 0, :y 1},
@@ -27,10 +18,9 @@
     (conj (vec (next snake)) {:x (+ (head :x) (movement :x))
                               :y (+ (head :y) (movement :y))})))
 
-(defn grow [snake dir]
+(defn grow [snake movement]
   "Grow snake in given direction."
-  (let [movement (movements dir)
-        head (peek snake)]
+  (let [head (peek snake)]
     (conj snake {:x (+ (head :x) (movement :x))
                  :y (+ (head :y) (movement :y))})))
 
@@ -49,7 +39,17 @@
           (recur)
           apple)))))
 
-(defn draw-blocks! [drawingContext blocks]
+(defn apply-movement [game movement]
+  "Apply given movement on game-state."
+  (let [new-snake (grow (game :snake) movement)]
+    (if (some #{(game :apple)} new-snake)
+      (assoc game
+             :snake new-snake
+             :apple (place-apple new-snake (game :dim)))
+      (assoc game
+             :snake (move (game :snake) movement)))))
+
+(defn draw-blocks! [drawingContext blocks block-size]
   "Draw seq of blocks on given drawing context."
   (when-let [block (first blocks)]
     (.fillRect drawingContext
@@ -57,39 +57,48 @@
                (* block-size (block :y))
                block-size
                block-size)
-    (recur drawingContext (rest blocks))))
+    (recur drawingContext (rest blocks) block-size)))
 
 (defn clear! [drawingContext block-size dim]
   "Clear drawing context."
   (.clearRect drawingContext 0 0 (* block-size dim) (* block-size dim)))
 
-(def apple (atom (place-apple @snake dim)))
+(defn redraw-game! [drawingContext game block-size]
+  "Redraw game-state on canvas with given block size."
+  (clear! drawingContext block-size (game :dim))
+  (set! (.-fillStyle drawingContext) "#000")
+  (draw-blocks! drawingContext (game :snake) block-size)
+  (set! (.-fillStyle drawingContext) "#F00")
+  (draw-blocks! drawingContext [(game :apple)] block-size))
 
-(defn run []
-  (js/requestAnimationFrame run)
-  ;; (.log js/console (str "Looping... " @i " Last key: " @last-key))
-  (when (= 0 (mod @i 10))
-    (.log js/console "Render!")
-    (clear! drawingContext block-size dim)
-    (let [new-snake (grow @snake @last-key)]
-      (if (some #{@apple} new-snake)
-        (do
-          (.log js/console "Grow!")
-          (reset! snake new-snake)
-          (reset! apple (place-apple new-snake dim))))
-      :else (reset! snake (move @snake (movements @last-key))))
-    (set! (.-fillStyle drawingContext) "#000")
-    (draw-blocks! drawingContext @snake)
-    (set! (.-fillStyle drawingContext) "#F00")
-    (draw-blocks! drawingContext [@apple]))
-  (swap! i inc))
+(def canvas (dom/getElement "canvas"))
+(def drawingContext (.getContext canvas "2d"))
+(def block-size 10)
+
+(def frame (atom 0))
+(def last-direction (atom :right))
+(def game (atom (let [snake [{:x 4, :y 2} {:x 5, :y 2} {:x 6, :y 2}]
+                      dim 50]
+                  {:snake snake
+                   :apple (place-apple snake dim)
+                   :dim dim})))
+
+(defn animate []
+  "Runs game loop."
+  (js/requestAnimationFrame animate)
+  (.log js/console (str "Looping... Last key: " @last-direction))
+  (when (= 0 (mod @frame 10))
+    (redraw-game! drawingContext
+                  (swap! game #(apply-movement % (movements @last-direction)))
+                  block-size))
+  (swap! frame inc))
 
 (set! (.-onkeydown js/window)
-               (fn [e]
-                 (when-let [dir (directions (.-keyCode e))]
-                     (reset! last-key dir))))
+      (fn [e]
+        (when-let [dir (directions (.-keyCode e))]
+          (reset! last-direction dir))))
 
-(set! (.-width canvas) (* block-size dim))
-(set! (.-height canvas) (* block-size dim))
+(set! (.-width canvas) (* block-size (@game :dim)))
+(set! (.-height canvas) (* block-size (@game :dim)))
 
-(run)
+(animate)
