@@ -1,6 +1,5 @@
 (ns snake-cljs.core
-  (:require [clojure.browser.repl :as repl]
-            [goog.dom :as dom]))
+  (:require [clojure.browser.repl :as repl]))
 
 (repl/connect "http://localhost:9000/repl")
 
@@ -71,10 +70,11 @@
   (set! (.-fillStyle drawingContext) "#F00")
   (draw-blocks! drawingContext [(game :apple)] block-size))
 
-(def canvas (dom/getElement "canvas"))
+(def canvas (. js/document (getElementById "canvas")))
 (def drawingContext (.getContext canvas "2d"))
 (def block-size 10)
 
+(defonce paused (atom false))
 (defonce frame (atom 0))
 (defonce last-direction (atom :right))
 (defonce game (atom (let [snake [{:x 4, :y 2} {:x 5, :y 2} {:x 6, :y 2}]
@@ -87,7 +87,7 @@
   "Runs game loop."
   (js/requestAnimationFrame animate)
   (.log js/console (str "Looping... Last key: " @last-direction))
-  (when (= 0 (mod @frame 10))
+  (when (and (= 0 (mod @frame 10)) (not @paused))
     (redraw-game! drawingContext
                   (swap! game #(apply-movement % (movements @last-direction)))
                   block-size))
@@ -96,7 +96,9 @@
 (set! (.-onkeydown js/window)
       (fn [e]
         (when-let [dir (directions (.-keyCode e))]
-          (reset! last-direction dir))))
+          (reset! last-direction dir))
+        (when (= 27 (.-keyCode e))
+          (swap! paused #(not %)))))
 
 (set! (.-width canvas) (* block-size (@game :dim)))
 (set! (.-height canvas) (* block-size (@game :dim)))
