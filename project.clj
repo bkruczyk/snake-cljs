@@ -4,11 +4,11 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "0.0-2411"]]
-  :plugins [[lein-cljsbuild "1.1.0"]]
-  :cljsbuild {:builds [{:source-paths ["src"]
-                        :compiler {:output-to "main.js"
-                                   :output-dir "out"
-                                   :optimizations :none
-                                   :source-map true}}]}
-  :clean-targets ["main.js" "out"])
+                 [org.clojure/clojurescript "1.7.122"]]
+  :plugins [[lein-figwheel "0.4.1"]]
+  :clean-targets [:target-path "out"]
+  :cljsbuild {
+              :builds [{:id "dev"
+                        :source-paths ["src"]
+                        :figwheel true
+                        :compiler {:main "snake-cljs.core"}}]})

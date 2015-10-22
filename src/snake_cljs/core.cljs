@@ -75,9 +75,9 @@
 (def drawingContext (.getContext canvas "2d"))
 (def block-size 10)
 
-(def frame (atom 0))
-(def last-direction (atom :right))
-(def game (atom (let [snake [{:x 4, :y 2} {:x 5, :y 2} {:x 6, :y 2}]
+(defonce frame (atom 0))
+(defonce last-direction (atom :right))
+(defonce game (atom (let [snake [{:x 4, :y 2} {:x 5, :y 2} {:x 6, :y 2}]
                       dim 50]
                   {:snake snake
                    :apple (place-apple snake dim)
